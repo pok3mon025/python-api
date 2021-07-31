@@ -74,7 +74,7 @@ def create_endpoints(app, services):
     @login_required
     def tweet():
         user_tweet = request.json
-        user_tweet['id'] = g.user_id
+        user_id = g.user_id
         tweet = user_tweet['tweet']
 
         result = tweet_service.tweet(user_id, tweet)
