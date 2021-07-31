@@ -2,6 +2,7 @@ import config
 
 from flask import Flask
 from sqlalchemy import create_engine
+from flask_cors    import CORS
 
 from model import UserDao, TweetDao
 from service import UserService, TweetService
@@ -14,6 +15,8 @@ class Services:
 
 def create_app(test_config=None):
     app = Flask(__name__)
+
+    CORS(app)
 
     if test_config is None:
         app.config.from_pyfile("config.py")
@@ -29,7 +32,7 @@ def create_app(test_config=None):
 
     # Business Layer
     services = Services
-    services.user_service = UserService(user_dao, app.config)
+    services.user_service = UserService(user_dao, config)
     services.tweet_service = TweetService(tweet_dao)
 
     # 엔드포인트 들을 생성
