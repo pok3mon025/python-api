@@ -34,12 +34,15 @@ class UserService:
             'user_id': user_id,
             'exp': datetime.utcnow() + timedelta(seconds=60*60*24)
         }
-        token = jwt.encode(payload, self.config['JWT_SECRET_KEY'], 'HS256')
+        token = jwt.encode(payload, self.config.JWT_SECRET_KEY, 'HS256')
 
         return token
 
     def follow(self, user_id, follow_id):
         return self.user_dao.insert_follow(user_id, follow_id)
+
+    def unfollow(self, user_id, unfollow_id):
+        return self.user_dao.insert_unfollow(user_id, unfollow_id)
 
     def get_user_id_and_password(self, email):
         return self.user_dao.get_user_id_and_password(email)
