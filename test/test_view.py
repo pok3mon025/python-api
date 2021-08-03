@@ -1,10 +1,10 @@
 import pytest
 import bcrypt
-import config
 import json
+import config
 
-from sqlalchemy import create_engine, text
 from app import create_app
+from sqlalchemy import create_engine, text
 
 database = create_engine(config.test_config['DB_URL'], encoding='utf-8', max_overflow=0)
 
@@ -12,7 +12,7 @@ database = create_engine(config.test_config['DB_URL'], encoding='utf-8', max_ove
 @pytest.fixture
 def api():
     app = create_app(config.test_config)
-    app.config['TESTING'] = True
+    app.config['TEST'] = True
     api = app.test_client()
 
     return api
@@ -21,7 +21,7 @@ def api():
 def setup_function():
     # Create a test user
     hashed_password = bcrypt.hashpw(
-        b"test password",
+        b"test1234",
         bcrypt.gensalt()
     )
     new_users = [
@@ -85,7 +85,7 @@ def test_login(api):
         '/login',
         data=json.dumps({
             'email': 'songew@gmail.com',
-            'password': 'test password'
+            'password': 'test1234'
         }),
         content_type='application/json'
     )
@@ -93,11 +93,20 @@ def test_login(api):
 
 
 def test_unauthorized(api):
-    # access token 없이는 401 응답을 리턴하는지를 확인
+    # access token이 없이는 401 응답을 리턴하는지를 확인
     resp = api.post(
         '/tweet',
         data=json.dumps({
             'tweet': "Hello World!"
+        }),
+        content_type='application/json'
+    )
+    assert resp.status_code == 401
+
+    resp = api.post(
+        '/follow',
+        data=json.dumps({
+            'follow': 2
         }),
         content_type='application/json'
     )
@@ -114,12 +123,12 @@ def test_unauthorized(api):
 
 
 def test_tweet(api):
-    # Login
+    # 로그인
     resp = api.post(
         '/login',
         data=json.dumps({
             'email': 'songew@gmail.com',
-            'password': 'test password'
+            'password': 'test1234'
         }),
         content_type='application/json'
     )
@@ -133,11 +142,13 @@ def test_tweet(api):
             'tweet': "Hello World!"
         }),
         content_type='application/json',
-        headers={'Authorization': access_token}
+        headers={
+            'Authorization': access_token
+        }
     )
     assert resp.status_code == 200
 
-    # Check tweet
+    # tweet 확인
     resp = api.get(f'/timeline/1')
     tweets = json.loads(resp.data.decode('utf-8'))
 
@@ -154,28 +165,29 @@ def test_tweet(api):
 
 
 def test_follow(api):
-    # Login
+    # 로그인
     resp = api.post(
         '/login',
         data=json.dumps({
             'email': 'songew@gmail.com',
-            'password': 'test password'
+            'password': 'test1234'
         }),
         content_type='application/json'
     )
     resp_json = json.loads(resp.data.decode('utf-8'))
     access_token = resp_json['access_token']
 
-    # 먼저 사용자 1의 tweet 확인해서 tweet 리스트가 비어있는 것을 확인
+    # 먼저 유저 1의 tweet 확인 해서 tweet 리스트가 비어 있는것을 확인
     resp = api.get(f'/timeline/1')
     tweets = json.loads(resp.data.decode('utf-8'))
+
     assert resp.status_code == 200
     assert tweets == {
         'user_id': 1,
         'timeline': []
     }
 
-    # follow 사용자 아이디 = 2
+    # follow 유저 아이디 = 2
     resp = api.post(
         '/follow',
         data=json.dumps({
@@ -186,7 +198,7 @@ def test_follow(api):
     )
     assert resp.status_code == 200
 
-    # 이제 사용자 1의 tweet 확인해서 사용자 2의 tweet이 리턴되는 것을 확인
+    # 이제 유저 1의 tweet 확인 해서 유저 2의 tweet의 리턴 되는것을 확인
     resp = api.get(f'/timeline/1')
     tweets = json.loads(resp.data.decode('utf-8'))
 
@@ -203,19 +215,19 @@ def test_follow(api):
 
 
 def test_unfollow(api):
-    # Login
+    # 로그인
     resp = api.post(
         '/login',
         data=json.dumps({
             'email': 'songew@gmail.com',
-            'password': 'test password'
+            'password': 'test1234'
         }),
         content_type='application/json'
     )
-    resp_json = json.loads(resp.data.decode('utf-8'))
+    resp_json = json.loads(resp.data)
     access_token = resp_json['access_token']
 
-    # follow 사용자 아이디 = 2
+    # follow 유저 아이디 = 2
     resp = api.post(
         '/follow',
         data=json.dumps({
@@ -228,9 +240,9 @@ def test_unfollow(api):
     )
     assert resp.status_code == 200
 
-    # 이제 사용자 1의 tweet을 확인해서 사용자 2의 tweet이 리턴 되는 것을 확인
+    # 이제 유저 1의 tweet 확인 해서 유저 2의 tweet의 리턴 되는것을 확인
     resp = api.get(f'/timeline/1')
-    tweets = json.loads(resp.data.decode('utf-8'))
+    tweets = json.loads(resp.data)
 
     assert resp.status_code == 200
     assert tweets == {
@@ -243,7 +255,7 @@ def test_unfollow(api):
         ]
     }
 
-    # unfollow 사용자 아이디 = 2
+    # unfollow 유저 아이디 = 2
     resp = api.post(
         '/unfollow',
         data=json.dumps({
@@ -256,7 +268,7 @@ def test_unfollow(api):
     )
     assert resp.status_code == 200
 
-    # 이제 사용자 1의 tweet 확인해서 유저 2의 tweet이 더 이상 리턴되지 않는 것을 확인
+    # 이제 유저 1의 tweet 확인 해서 유저 2의 tweet이 더 이상 리턴 되지 않는 것을 확인
     resp = api.get(f'/timeline/1')
     tweets = json.loads(resp.data.decode('utf-8'))
 
